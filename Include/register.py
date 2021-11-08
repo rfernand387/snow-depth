@@ -84,7 +84,7 @@ def register(img, name, template, template_reduced_noise, img_apply, debug,
 
     # determine affine 2D transformation using RANSAC robust method
     # if feature based registration selected
-    if(params[6] == 0 or params[6] == 1):
+    if((params[6] == 0 or params[6] == 1) and ((len(filteredMatches)>0) and (len(points1) == len(points2)))):
         affine_matrix = cv2.estimateAffine2D(points1, points2, method = cv2.RANSAC,
             refineIters=20)[0]
     else:

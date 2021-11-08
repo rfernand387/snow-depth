@@ -17,7 +17,8 @@ from keras.models import load_model
 median_kernel_size = 5
 dilate_kernel = (5, 5)
 
-def getActualCoords(dilatedCoords, upper_border):
+7
+def getActualCoords2(dilatedCoords, upper_border):
     """
     Function to get undilated coordinates from template roi
 
@@ -37,8 +38,8 @@ def getActualCoords(dilatedCoords, upper_border):
         [bottom_right[0]-dilate_px, bottom_right[1]-dilate_px],
         [top_left[0]+dilate_px, bottom_right[1]-dilate_px]
     )
-
-def roiValid(coordinates, blobs):
+	
+def roiValid2(coordinates, blobs):
     """
     Function to determine if a randomly sampled roi intersects with any blobs
 
@@ -62,8 +63,47 @@ def roiValid(coordinates, blobs):
 
     # return True if passes all tests
     return True
+	
+def updateDatset2(dataset, tensor_vals, dataset_enabled):
+    """
+    Function to update dataset given calculated tensors for a set of images
 
-def imageValid(img_, coordinates, hsvRanges, blobSizes, upper_border, debug, name,
+    Keyword arguments:
+    dataset -- tensor dataset to be updated
+    tensor_vals -- lists containing calculated tensors for each stake
+    dataset_enabled -- flag indicating whether dataset has been initialized
+    """
+
+    # run for all stakes
+    for i, x in enumerate(dataset):
+        # if dataset enabled
+        if dataset_enabled[i]:
+            # get mean and standard deviation from dataset
+            mean = dataset[i][0][0]
+            std_dev = dataset[i][0][1]
+
+            # iterate through tensor values
+            for y in tensor_vals.values():
+                if y[i] != True and y[i] != False:
+                    mean_tensor = y[i]
+                    num_vals_dataset = dataset[i][0][2]
+                    new_vals_dataset = num_vals_dataset + 1
+                    new_mean = ((mean * num_vals_dataset) + mean_tensor) / new_vals_dataset
+                    new_std_dev = np.sqrt(pow(std_dev, 2) + ((((mean_tensor - mean) * (mean_tensor - new_mean)) - \
+                                pow(std_dev, 2)) / new_vals_dataset))
+                    dataset[i] = np.array([[new_mean, new_std_dev, new_vals_dataset], []])
+
+        # else add values to dataset
+        else:
+            for y in tensor_vals.values():
+                if y[i] != True and y != False:
+                    dataset[i][1].append(y[i])
+
+    # return updated dataset
+    return dataset
+
+
+def imageValid2(img_, coordinates, hsvRanges, blobSizes, upper_border, debug, name,
     debug_directory, dataset, dataset_enabled, NUM_STD_DEV, validPath, invalidPath,
     model, modelInitialized, validIndex, invalidIndex, flattened_list, DLActive):
     """
@@ -91,6 +131,7 @@ def imageValid(img_, coordinates, hsvRanges, blobSizes, upper_border, debug, nam
     flattened_list -- flattened list of blob roi coordinates
     DLActive -- flag indicating whether user has elected to use deep learning
     """
+    #print("\n\nimageValid")
 
     # duplicate image
     img = img_.copy()
@@ -117,13 +158,18 @@ def imageValid(img_, coordinates, hsvRanges, blobSizes, upper_border, debug, nam
     # create list for valid blobs
     validBlobsImage = list()
 
+    # create list for valid blobs
+    stake_dict = list()
+	
     # reduce noise in image by local smoothing
     img_blur = cv2.medianBlur(img, median_kernel_size)
+        
 
     # identify coloured regions in image
     hsv = cv2.cvtColor(img_blur, cv2.COLOR_BGR2HSV)
+    cv2.imwrite(debug_directory + "input" + name , hsv)
     mask_hsv = cv2.inRange(hsv, hsvRanges[0], hsvRanges[1])
-
+	
     # apply second mask if required
     if(numRanges == 4):
         mask_hsv2 = cv2.inRange(hsv, hsvRanges[2], hsvRanges[3])
@@ -131,7 +177,8 @@ def imageValid(img_, coordinates, hsvRanges, blobSizes, upper_border, debug, nam
 
     # erosion followed by dilation to reduce noise
     kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, dilate_kernel)
-    mask_open = cv2.morphologyEx(mask_hsv, cv2.MORPH_OPEN, kernel)
+    mask_open = cv2.morphologyEx(mask_hsv, cv2.MORPH_OPEN, kernel) 
+    cv2.imwrite(debug_directory + "maskopen" + name , mask_hsv)
 
     # iterate through stakes
     for j, stake in enumerate(coordinates):
@@ -146,6 +193,9 @@ def imageValid(img_, coordinates, hsvRanges, blobSizes, upper_border, debug, nam
 
         # iterate through roi in each stake
         for i, rectangle in enumerate(stake):
+            #print("\n\ni", i)
+            #print("\n\nrectangle", rectangle)
+			
             # skip stakes
             if i == 0:
                 continue
@@ -165,8 +215,10 @@ def imageValid(img_, coordinates, hsvRanges, blobSizes, upper_border, debug, nam
                 mask_open[int(top_left[1]):int(bottom_right[1]),int(top_left[0]):int(bottom_right[0])]
 
             # find final coloured polygon regions
-            contours = cv2.findContours(mask.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)[1]
+            cv2.imwrite(debug_directory + "maskopennew" + name , mask)
+            contours = cv2.findContours(cv2.cvtColor(cv2.imread(debug_directory + "maskopennew" + name), cv2.COLOR_BGR2GRAY), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0]
             contour_index = 0
+            #print("\n\ncountours",contours)
 
             # iterate through contours
             for k, cnt in enumerate(contours):
@@ -212,7 +264,7 @@ def imageValid(img_, coordinates, hsvRanges, blobSizes, upper_border, debug, nam
                     y_rand = random.randint(0, int(h_img - roi_height))
 
                     # iterate until valid roi
-                    while(not(roiValid([[x_rand, y_rand], [x_rand+roi_width, y_rand+roi_height]],
+                    while(not(roiValid2([[x_rand, y_rand], [x_rand+roi_width, y_rand+roi_height]],
                         flattened_list))):
                         x_rand = random.randint(0, int(w_img - roi_width))
                         y_rand = random.randint(0, int(h_img - roi_height))
@@ -378,13 +430,13 @@ def imageValid(img_, coordinates, hsvRanges, blobSizes, upper_border, debug, nam
             # if there are only 2 valid blobs on the stake
             else:
                 # take lowest and highest possible blobs on stake to create intersection lines
-                ordered_coordinates_low = getActualCoords(coordinates[j][1], upper_border)
-                ordered_coordinates_high = getActualCoords(coordinates[j][len(coordinates[j])-1], upper_border)
+                ordered_coordinates_low = getActualCoords2(coordinates[j][1], upper_border)
+                ordered_coordinates_high = getActualCoords2(coordinates[j][len(coordinates[j])-1], upper_border)
 
                 # replace valid blob coordinates with template coordinates in actualCoords
                 for blob_index in range(0, len(actualCoords)):
                     if actualCoords[blob_index] != False: # valid blob but unreliable coordinates
-                        actualCoords[blob_index] = getActualCoords(coordinates[j][blob_index], upper_border)
+                        actualCoords[blob_index] = getActualCoords2(coordinates[j][blob_index], upper_border)
 
                 # add to upper and lower list
                 blobCoordsStake.append(list(ordered_coordinates_low + ordered_coordinates_high))
@@ -423,12 +475,14 @@ def imageValid(img_, coordinates, hsvRanges, blobSizes, upper_border, debug, nam
         stake_dict_coords_low['stake' + str(x)] = blobCoordsStake[x][0:4]
         stake_dict_coords_high['stake' + str(x)] = blobCoordsStake[x][4:8]
         stake_dict_tensor['stake' + str(x)] = actualTensorsStake[x]
+			
+    #print("\n\nimageValid done", contours)
 
     return (validStakes, actualCoordsStake, actualTensorsStake, stake_dict,
         stake_dict_coords_low, stake_dict_coords_high, validIndex, invalidIndex,
         name, validBlobsImage, stake_dict_tensor)
-
-def getModelData(validPath, invalidPath, coordinates):
+		
+def getModelData2(validPath, invalidPath, coordinates):
     """
     Function to get image indices and flattened list of coordinates
 
@@ -456,44 +510,6 @@ def getModelData(validPath, invalidPath, coordinates):
 
     # return indices and flattened list
     return validIndex, invalidIndex, flattened_list
-
-def updateDatset(dataset, tensor_vals, dataset_enabled):
-    """
-    Function to update dataset given calculated tensors for a set of images
-
-    Keyword arguments:
-    dataset -- tensor dataset to be updated
-    tensor_vals -- lists containing calculated tensors for each stake
-    dataset_enabled -- flag indicating whether dataset has been initialized
-    """
-
-    # run for all stakes
-    for i, x in enumerate(dataset):
-        # if dataset enabled
-        if dataset_enabled[i]:
-            # get mean and standard deviation from dataset
-            mean = dataset[i][0][0]
-            std_dev = dataset[i][0][1]
-
-            # iterate through tensor values
-            for y in tensor_vals.values():
-                if y[i] != True and y[i] != False:
-                    mean_tensor = y[i]
-                    num_vals_dataset = dataset[i][0][2]
-                    new_vals_dataset = num_vals_dataset + 1
-                    new_mean = ((mean * num_vals_dataset) + mean_tensor) / new_vals_dataset
-                    new_std_dev = np.sqrt(pow(std_dev, 2) + ((((mean_tensor - mean) * (mean_tensor - new_mean)) - \
-                                pow(std_dev, 2)) / new_vals_dataset))
-                    dataset[i] = np.array([[new_mean, new_std_dev, new_vals_dataset], []])
-
-        # else add values to dataset
-        else:
-            for y in tensor_vals.values():
-                if y[i] != True and y != False:
-                    dataset[i][1].append(y[i])
-
-    # return updated dataset
-    return dataset
 
 def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
     img_names, debug_directory, dataset, dataset_enabled, NUM_STD_DEV,
@@ -538,7 +554,7 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 
     if not modelInitialized:
         # get data about model training
-        validIndex, invalidIndex, flattened_list = getModelData(validPath, invalidPath,
+        validIndex, invalidIndex, flattened_list = getModelData2(validPath, invalidPath,
             coordinates)
         model = None
     else:
@@ -562,13 +578,14 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
 
     # image iterator
     iterator = 0
-
-    # iterate through images
+    #print("\n\nvalidIndex",validIndex)
+    if(debug):
+        print("\n\nmodelInitialized",modelInitialized)		
     for img_ in tqdm.tqdm(imgs):
-
+		
         # get valid stakes from image
         validStakes, actualCoordsStake, actualTensorsStake, stake_dict, stake_dict_coords_low, stake_dict_coords_high, \
-            validIndex, invalidIndex, name, validImgBlobs, stake_dict_tensor = imageValid(img_,
+            validIndex, invalidIndex, name, validImgBlobs, stake_dict_tensor = imageValid2(img_,
             coordinates, hsvRanges, blobSizes, upper_border, debug, img_names[iterator],
             debug_directory, dataset, dataset_enabled, NUM_STD_DEV, validPath,
             invalidPath, model, modelInitialized, validIndex, invalidIndex,
@@ -600,7 +617,7 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
         iterator += 1
 
     # update dataset
-    dataset = updateDatset(dataset, actualTensors, dataset_enabled)
+    dataset = updateDatset2(dataset, actualTensors, dataset_enabled)
 
     # if in debugging mode
     if(debug):
@@ -608,28 +625,21 @@ def getValidStakes(imgs, coordinates, hsvRanges, blobSizes, upper_border, debug,
         file = open(debug_directory + 'stakes.json', 'w')
         json.dump(stake_output, file, sort_keys=True, indent=4, separators=(',', ': '))
 
-    # determine whether model should be initialized
-    if not modelInitialized and validIndex > 1000 and invalidIndex > 1000 and DLActive:
-        # create neural network
-        print("\nInitializing Deep Learning Model")
-        LeNet(model_path, validPath, invalidPath)
 
-        # delete training images
-        import shutil
-        shutil.rmtree(str(Path(validPath).parents[0]))
 
     # return list of valid stakes
     return validImages, blobCoords, dataset, actualTensors, imageSummary
 
 
-def unpackArgs(args):
+def unpackArgs2(args):
     """
-    Function to unpack arguments explicitly and call imageValid function
+    Function to unpack arguments explicitly and call imageValid2 function
 
     Keyword arguments:
     args -- function arguments passed by parallel validation function
     """
-    return imageValid(*args)
+    return imageValid2(*args)
+
 
 def getValidStakesParallel(pool, imgs, coordinates, hsvRanges, blobSizes, upper_border,
     debug, img_names, debug_directory, dataset, dataset_enabled, NUM_STD_DEV,
@@ -657,7 +667,6 @@ def getValidStakesParallel(pool, imgs, coordinates, hsvRanges, blobSizes, upper_
     DLActive -- flag indicating whether user has elected to use deep learning
     imageSummary -- dictionary containing information about each run
     """
-
     # determine paths for training images
     validPath = training_path + "blob\\"
     invalidPath = training_path + "non-blob\\"
@@ -669,7 +678,7 @@ def getValidStakesParallel(pool, imgs, coordinates, hsvRanges, blobSizes, upper_
 
     if not modelInitialized:
         # get data about model training
-        validIndex, invalidIndex, flattened_list = getModelData(validPath, invalidPath,
+        validIndex, invalidIndex, flattened_list = getModelData2(validPath, invalidPath,
             coordinates)
         model = None
     else:
@@ -678,6 +687,7 @@ def getValidStakesParallel(pool, imgs, coordinates, hsvRanges, blobSizes, upper_
         validIndex = 0
         invalidIndex = 0
         flattened_list = None
+
 
     # contains output data
     stake_output = {}
@@ -708,7 +718,7 @@ def getValidStakesParallel(pool, imgs, coordinates, hsvRanges, blobSizes, upper_
             startIndexInvalid, flattened_list, DLActive))
 
     # run tasks using pool
-    for i in tqdm.tqdm(pool.imap(unpackArgs, tasks), total=len(tasks)):
+    for i in tqdm.tqdm(pool.imap(unpackArgs2, tasks), total=len(tasks)):
         # unpack return
         validStakes, actualCoordsStake, actualTensorsStake, stake_dict, stake_dict_coords_low, \
             stake_dict_coords_high, validIndex, invalidIndex, name, validImgBlobs, stake_dict_tensor = i
@@ -736,7 +746,7 @@ def getValidStakesParallel(pool, imgs, coordinates, hsvRanges, blobSizes, upper_
                 % (validStakes[e], num_valid, len(stake), actualTensorsStake[e])
 
     # update dataset
-    dataset = updateDatset(dataset, actualTensors, dataset_enabled)
+    dataset = updateDatset2(dataset, actualTensors, dataset_enabled)
 
     # if in debugging mode
     if(debug):
@@ -756,3 +766,4 @@ def getValidStakesParallel(pool, imgs, coordinates, hsvRanges, blobSizes, upper_
 
     # return list of valid stakes
     return validImages, blobCoords, dataset, actualTensors, imageSummary
+	

@@ -79,7 +79,7 @@ def getPeakIndex(sorted_index, peaks, params, lineVals, peakWidths, last_index,
 
     selected_peak = -1 # index of correct peak
     major_peak = -1 # larger peak for threshold calculation
-
+    snow_cover = -100  # initialize snow cover
     # iterate through peaks from top to bottom of stake
     for index in sorted_index:
         # determine stake cover before peak
@@ -92,11 +92,13 @@ def getPeakIndex(sorted_index, peaks, params, lineVals, peakWidths, last_index,
         if snow_threshold < 100: snow_threshold = 100 # 100 is minimum
         stake_cover = len(np.where(peak_range < snow_threshold)[0]) / float(len(peak_range))
 
-        # determine snow cover after peak
+        # determine snow cover after peak 
         right_edge = properties["right_ips"][index]
         peak_range = lineVals[int(right_edge):]
-        snow_cover = len(np.where(peak_range > snow_threshold)[0]) / float(len(peak_range) - \
-            len(np.where(peak_range==0)[0])) # don't count image border
+        denom = len(peak_range) - len(np.where(peak_range==0)[0])		
+        if denom > 0:
+            snow_cover = len(np.where(peak_range > snow_threshold)[0]) / float(denom) # don't count image border
+        
 
         # determine peak width
         peak_width = peakWidths[index]
@@ -115,6 +117,7 @@ def getPeakIndex(sorted_index, peaks, params, lineVals, peakWidths, last_index,
             edgeValid = True # flag for whether major amount of stake remaining
             if right_edge < index_edge:
                 remaining_range = lineVals[int(right_edge):int(index_edge)]
+            if remaining_range > 0:
                 remaining_stake = float(len(np.where(remaining_range < 100)[0]) - len(np.where(remaining_range==0)[0])) \
                     / float(len(remaining_range))
                 index_edge_prop = index_edge / float(line_length) # don't consider this check if stake edge extends to bottom
@@ -131,7 +134,7 @@ def getPeakIndex(sorted_index, peaks, params, lineVals, peakWidths, last_index,
             and (stake_cover > params[3] or past_edge) # majority stake before peak
             and (snow_cover > params[4] or past_edge) # snow after peak
             and (peak_intensity > maxLineVal or (next_peak_height > maxLineVal and proximity_peak < 75
-                and peak_intensity / float(next_peak_height) > 0.5) or past_edge) # peak is high enough
+                and peak_intensity / float(next_peak_height+0.001) > 0.5) or past_edge) # peak is high enough
             and (peak_width > 50 or (peak_width + peak_width_next > 50 and proximity_peak < 100)
                 or (minimum_between_peaks < 100 and past_edge) or (proximity_peak < 50 and past_edge)) # peak is sustained (wide enough)
             and (minimum_between_peaks > 100 or distance_between_peaks > 200 or past_edge) # no stake after peak
@@ -361,6 +364,7 @@ def intersect(img, boxCoords, stakeValidity, roiCoordinates, name, debug,
 
             # adjust line length so 1pt represents 1mm
             line_length *= tensors[i] if tensors[i] != True else template_tensors[i]
+            line_length = int(line_length)
 
             # add combinations to list
             coordinateCombinations.extend([
