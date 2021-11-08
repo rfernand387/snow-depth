@@ -14,9 +14,9 @@ from keras.layers.core import Dense
 from keras import backend as K
 from keras.preprocessing.image import img_to_array
 from keras.preprocessing.image import ImageDataGenerator
-from keras.optimizers import Adam
+from tensorflow.keras.optimizers import Adam
 from sklearn.model_selection import train_test_split
-from keras.utils import to_categorical
+from tensorflow.keras.utils import to_categorical
 import numpy as np
 import cv2
 import random
@@ -43,6 +43,7 @@ class LeNet:
 	def __init__(self, path, validSetPath, invalidSetPath):
 		"""
 		Function to train and save neural network
+		print("/n/nLeNet")
 
 		Keyword arguments:
 		path -- path for saved .model file
