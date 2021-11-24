@@ -1,4 +1,18 @@
 # Snow Depth Measurement
+
+Welcome to the Landscape Evolution And Forecasting (LEAF)-Toolbox
+
+Richard Fernandes,
+Canada Centre for Remote Sensing,
+Government of Canada 
+richard.fernandes@canada.ca
+
+License:  https://open.canada.ca/en/open-government-licence-canada
+
+DOI 10.5281/zenodo.4321297.
+
+Check the wiki for help.
+
 ## What is it?
 This is a tool that allows a user to perform automated measurements of snow depth using outdoor cameras. The application is built on Python 3.6 and can be run by any user if they have the necessary dependancies installed.
 
