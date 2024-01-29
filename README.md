@@ -1,6 +1,6 @@
 # Snow Depth Measurement
 
-Welcome to the Landscape Evolution And Forecasting (LEAF)-Toolbox
+Welcome to the CCRS Snow Depth Measurement Application
 
 Richard Fernandes,
 Canada Centre for Remote Sensing,
@@ -9,7 +9,9 @@ richard.fernandes@canada.ca
 
 License:  https://open.canada.ca/en/open-government-licence-canada
 
-DOI 10.5281/zenodo.4321297.
+Citation: Fernandes, R AORCID logo; Bariciak, T; Prévost, C; Yao, H; Field, T; McConnell, C; Luce, J; Metcalfe, R, 2019, Method for measurement of snow depth using time-lapse photography
+	Geomatics Canada, Open File 47,  https://doi.org/10.4095/314726.
+
 
 Check the wiki for help.
 
